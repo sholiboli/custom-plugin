@@ -1,4 +1,4 @@
-console.log('MTF Modern Multiselect - ver7');
+console.log('filter-button2.js');
 
 jQuery(function($){
 	
@@ -105,6 +105,13 @@ $(document).on('click.customMTF', 'ul.caf-multi-drop-sub li', function(e){
   cafScrollToDiv(divClass.replace('data-target-div',''));
   get_posts(params);
 
+// j-2 Trigget set_active_filters after AJAX reload completes
+	setTimeout(function() {
+  jQuery(".caf-filter-layout").each(function(){
+    set_active_filters(this);
+  });
+}, 100);
+	
   // k) Rebuild the “active filters” list & custom buttons
   renderButtons();
   set_active_filters('#caf-post-layout-container.' + divClass);
@@ -259,6 +266,17 @@ $(document).on('click', 'ul.caf-multi-drop-sub li.caf_select_multi_default_label
 });
 
 
+	// after all scripts finish restoring filters on load
+		$(window).on('load', function(){
+  setTimeout(function(){
+    if (saveLastFilterPref && Array.isArray(window.selected) && window.selected.length > 0) {
+      renderButtons();
+      set_active_filters($('.caf-post-layout-container'));
+      $(document).trigger('filtersReady');
+    }
+  }, 500);
+});
+	
 //───────────────────────PART 2: ENABLE MULTIPLE DROPDOWN MENUS OPENED AT THE SAME TIME─────────────────────────────────────
 
 // 4) Neutralize CAF’s header-click and replace it
