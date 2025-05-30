@@ -1,3 +1,4 @@
+console.log('filter-layout1.js');
 
 jQuery(document).ready(function($) {
     // Helper: Deduplicate active filters in the container.
