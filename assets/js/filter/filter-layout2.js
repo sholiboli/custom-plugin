@@ -1,13 +1,28 @@
 //───────────────────────ENABLE CAF ACTIVE FILTERS FOR MTF MODERN AND MCF─────────────────────────────────────
+console.log('filter-layout2.js');
 
 jQuery(function($){
-	  window.set_active_filters = function(div) {
-	  
-	    // 0) Clear any previous filters in the UI and in memory
-  active_filters = [];
-  jQuery(div).find(".caf-active-filters ul").empty();
-	  
-	  // 1) Handle checkbox-based filters (as CAF does by default)
+
+  // NEW: Helper function to remove duplicates in .caf-active-filters
+  function deduplicateActiveFilters(div) {
+    var seen = {};
+    jQuery(div).find('.caf-active-filters ul li.filter-item').each(function() {
+      var id = jQuery(this).attr('data-id');
+      if (seen[id]) {
+        jQuery(this).remove();
+      } else {
+        seen[id] = true;
+      }
+    });
+  }
+
+  window.set_active_filters = function(div) {
+
+    // 0) Clear any previous filters in the UI and in memory
+    active_filters = [];
+    jQuery(div).find(".caf-active-filters ul").empty();
+
+    // 1) Handle checkbox-based filters (as CAF does by default)
     jQuery(div).find(
       "#caf-multiple-taxonomy-filter li .check_box," +
       "#caf-multiple-check-filter li .check_box"
@@ -71,5 +86,17 @@ jQuery(function($){
     } else {
       jQuery(div).find(".caf-clear-all").fadeOut(function(){ jQuery(this).remove(); });
     }
+
+    // NEW: remove any duplicate filters
+    deduplicateActiveFilters(div);
   };
+
+  // Wait for filtersReady event from filter-button1.js or filter-button2.js
+  $(document).on('filtersReady', function() {
+    var $container = $('.caf-post-layout-container');
+    if ($container.length && typeof set_active_filters === 'function') {
+      set_active_filters($container);
+    }
+  });
+
 });
