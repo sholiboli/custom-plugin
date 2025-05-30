@@ -1,4 +1,4 @@
-console.log('Custom filter Buttons - MFT modern v5');
+console.log('filter-button1.js');
 
 jQuery(function($){
 
@@ -742,6 +742,7 @@ if (saveLastFilterPref && lastFilter.length) {
   var div = $('#caf-post-layout-container').attr('data-target-div');
   set_active_filters($('.caf-post-layout-container.' + div));
   dedupeActiveFilters();
+$(document).trigger('filtersReady');
 
   // ✅ Apply filters
   applyCustomFilters();
