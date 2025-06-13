@@ -1,19 +1,21 @@
-console.log('filter-button2.js');
+console.log('filter-button2');
+console.log('FilterHelper exists?', typeof FilterHelper !== 'undefined');
+
+//———————————————————————————————————————————— JS SCRIPT HELPER————————————————————————————————————————————————————————————————
 
 jQuery(function($){
 	
-	// Work on the shared array by aliasing it locally…
+// Work on the shared array by aliasing it locally…
 var selected = window.selected || [];
 
-	// bring in the “save last filter” preference so our blocks can refer to it
-// bring in the global “save last filter” flag
-var saveLastFilterPref = (typeof window.saveLastFilterPref !== 'undefined')
-                         ? window.saveLastFilterPref
-                         : (typeof userSaveLastFilter !== 'undefined'
-                            ? Boolean(parseInt(userSaveLastFilter, 10))
-                            : false);
-
-
+// Ensure window.saveLastFilterPref is correctly set
+if (typeof window.saveLastFilterPref === 'undefined') {
+  if (typeof userSaveLastFilter !== 'undefined') {
+    window.saveLastFilterPref = Boolean(parseInt(userSaveLastFilter, 10));
+  } else {
+    window.saveLastFilterPref = false;
+  }
+}
 	
   // 1) Cache each filter’s default-text
   $('ul.caf_select_multi').each(function(){
@@ -25,101 +27,118 @@ var saveLastFilterPref = (typeof window.saveLastFilterPref !== 'undefined')
   $(document).off('click.customMTF', 'ul.caf-multi-drop-sub li');
   $('ul.caf-multi-drop-sub li').off('click');
 
-  
-	// 3) Bind our multi-select + immediate-AJAX handler
-$(document).on('click.customMTF', 'ul.caf-multi-drop-sub li', function(e){
+  	// 3) Bind our multi-select + immediate-AJAX handler
+$(document).on('click.customMTF', 'ul.caf-multi-drop-sub li', function (e) {
   var $li = $(this);
+  console.log('[MTF] click on:', {
+    text:  $li.text().trim(),
+    id:    $li.data('value'),
+    name:  $li.data('name')
+  });
 
-  // If this is the built-in “All …” entry, skip CAF’s original code but
-  // don’t leave this handler—you need block 10 to run.
-  if ( $li.hasClass('caf_select_multi_default_label_2') ) {
-    // just return out of CAF’s default, not the custom logic
+  /* ------------------A. BYPASS “All …” LABEL------------------ */
+	
+  if ($li.hasClass('caf_select_multi_default_label_2')) {
+    console.log('[MTF] All-label clicked → let CAF default run');
     return false;
   }
 
-  // — your existing logic —
+  /* -----------B. STOP CAF’S OWN LISTENER (unchanged from your code)----------------- */
+	
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation();
 
+  /* --------- C. BUILD REFERENCES----------------- */
+	
   var $dropdown = $li.closest('ul.caf-multi-drop-sub'),
       $wrap     = $dropdown.closest('ul.caf_select_multi'),
       $def      = $wrap.find('.caf_select_multi_default'),
-      defaultTxt= $def.data('default-text');
+      defaultTxt = $def.data('default-text');
+  console.log('[MTF] defaultTxt:', defaultTxt);
 
-  // a) Toggle active
+  /* --------D. TOGGLE ACTIVE STATE---------------------- */
+	
   $li.toggleClass('active');
+  console.log('[MTF] $li isActive?', $li.hasClass('active'));
 
-  // b) Rebuild label & its data-value
-  var names = $dropdown.find('li.active').map((i,el)=>$(el).attr('data-name')).get(),
-      vals  = $dropdown.find('li.active').map((i,el)=>$(el).attr('data-value')).get();
-  $def.find('span').text(names.length ? names.join(', ') : defaultTxt);
-  $def.attr('data-value', vals.length ? vals.join(',') : '0');
+  /* --------E. LABEL & DATA-VALUE ON <li.caf_select_multi_default> -------------------------------- */
+ 
+	// Helper function: Get active names and values from a dropdown
+	var { names, values } = FilterHelper.getActiveNamesAndValues($dropdown);
+	// Helper: Default text and value updater
+	FilterHelper.updateDropdownLabel($wrap, defaultTxt);
 
-  // c) Identify the full data-target-div class
+  console.log('[MTF] names[]:', names);
+  console.log('[MTF] vals[] :', values);
+
+	  /* ---------F. IDENTIFY THE TARGET GRID------------------ */
+	
   var divClass = $li.closest('.caf-multiple-taxonomy-filter-modern')
-                   .attr('class')
-                   .split(/\s+/)
-                   .find(c=>c.indexOf('data-target-div')===0);
+                    .attr('class')
+                    .split(/\s+/)
+                    .find(c => c.indexOf('data-target-div') === 0);
+  console.log('[MTF] divClass:', divClass);
 
-  // d) Flatten all defaults’ values into CSV
-  var flat = [];
-  $('li.caf_select_multi_default').each(function(){
-    var str = $(this).attr('data-value');
-    if (str && str!=='0') str.split(',').forEach(v=>flat.push(v));
-  });
-  var termsCSV = flat.join(',');
+  /* -------- G. COLLECT SELECTED TERMS  (*** KEY PART ***)------------------ */
+	
+// ✅ Always gather from all active dropdown selections, not just the current one
+var allVals = $('ul.caf-multi-drop-sub li.active').map(function(){
+  return this.getAttribute('data-value');
+}).get();
 
-  // —— NEW —— sync your shared array
-  selected = flat.slice();
-  window.selected = selected;
+var flat     = allVals.slice(); // full deduped list
+var termsCSV = flat.join(',');
+console.log('[MTF] flat     →', flat);
+console.log('[MTF] termsCSV →', termsCSV);
 
-  // ✅ Moved here: persist if user wants “save last filter”
-  if ( window.saveLastFilterPref ) {
+/* keep globals in sync */
+window.selected = flat.slice();
+console.log('[MTF] ✅ window.selected updated across all dropdowns:', window.selected);
 
-    $.post( ajaxurl, {
-      action: 'caf_update_last_filter',
-      filter: window.selected.join(','),
-      nonce:  cafLastFilterNonce
-    });
-  }
+/* persist last-filter pref if enabled */
+FilterHelper.saveLastFilterPref(window.selected);
 
-  // e) Decide layout
-  var layout = flat.length > 1
-               ? 'multiple-taxonomy-filter2'
-               : 'multiple-taxonomy-filter';
+  /* ------------ H. DECIDE LAYOUT STRING---------------- */
 
-  // f) Update the container’s attributes
-  var $container = $('#caf-post-layout-container.' + divClass);
-  $container
-    .attr('data-terms', termsCSV)
-    .attr('data-filter-layout', layout);
+	// Helper function: Decide layout string for given container
+	var $container = $('#caf-post-layout-container.' + divClass);
+	var layout = FilterHelper.getFilterLayoutFromContainer($container, flat);
+	console.log('[MTF] chosen layout →', layout);
 
-  // g) Build params via get_params()
-  var params = get_params('1', divClass);
-  params['caf-perform'] = 'filter';
-  params['term']        = termsCSV;
-  params['caf-perform-term'] = $li.attr('data-value');
+	// Helper function: Update container metadata, store latest terms/layout on wrapper
+		FilterHelper.updateContainerMeta($container, termsCSV, layout);
 
-  // j) Fire CAF’s AJAX refresh
-  cafScrollToDiv(divClass.replace('data-target-div',''));
+  /* -----------  I. BUILD PARAMS FOR get_posts()------------------- */
+  
+	// Helper function: Build params for AJAX post
+		var params = FilterHelper.buildAjaxParams(divClass, termsCSV, $li.data('value'));
+
+  console.log('[MTF] final params to get_posts:', params);
+
+  /* ------------- J. FIRE AJAX & UI HELPERS------------------- */
+	
+  cafScrollToDiv(divClass.replace('data-target-div', ''));
   get_posts(params);
+   console.log('[MTF] get_posts received:', JSON.parse(JSON.stringify(params)));
 
-// j-2 Trigget set_active_filters after AJAX reload completes
-	setTimeout(function() {
-  jQuery(".caf-filter-layout").each(function(){
-    set_active_filters(this);
-  });
-}, 100);
-	
-  // k) Rebuild the “active filters” list & custom buttons
+  /* after reload, refresh pills */
+  setTimeout(function () {
+    $('.caf-filter-layout').each(function () {
+      set_active_filters(this);
+    });
+    console.log('[MTF] set_active_filters() ran (timeout)');
+	  
+	  
+	   // 11) Save filter to DB if enabled
+FilterHelper.saveLastFilterPref(window.selected);
+  }, 100);
+
+  /* rebuild custom buttons */
   renderButtons();
-  set_active_filters('#caf-post-layout-container.' + divClass);
+  FilterHelper.rebuildActiveFilterUI($container);
+  console.log('[MTF] custom buttons rebuilt');
 });
-
-
-
-	
 	
 	// 4) Clear All handler for MTF
 $(document).on('click', '.clear-all-btn', function(e){
@@ -127,42 +146,33 @@ $(document).on('click', '.clear-all-btn', function(e){
   e.stopPropagation();
 
   // a) Identify the container
+  // a2) Helper function: Get divKey from .caf-post-layout-container
   var $plc   = $(this).closest('.caf-post-layout-container'),
-      divKey = $plc.attr('data-target-div');
+      divKey = FilterHelper.getDivKey($plc);
 
-  // b) Clear all active classes in dropdowns
-  $plc.find('ul.caf-multi-drop-sub li.active').removeClass('active');
+	// Helper function - Reset all dropdowns to default state 
+	// b & c) Reset all dropdowns to default
+		FilterHelper.resetDropdownsDefault($plc);
 
-  // c) Reset each default button to its original text & value
-  $plc.find('ul.caf_select_multi').each(function(){
-    var $def       = $(this).find('li.caf_select_multi_default'),
-        defaultTxt = $def.data('default-text');
-    $def.find('span').text(defaultTxt);
-    $def.attr('data-value', '0');
-  });
-
-  // d) Restore the container’s data-terms & layout
-  $plc
-    .attr('data-terms', $plc.data('selected-terms'))
-    .attr('data-filter-layout', 'multiple-taxonomy-filter');
+	// Helper function: Update container metadata, restore the container’s data-terms & layout
+		FilterHelper.updateContainerMeta(
+			$plc,
+			$plc.data('selected-terms'),
+				'multiple-taxonomy-filter'
+		);
 
   // → reset the saved‐filter array so it’s truly cleared
   window.selected = [];
 
   // —————————SAVE LAST FILTER————————
-  if ( window.saveLastFilterPref ) {
+FilterHelper.saveLastFilterPref(window.selected);
 
-    $.post( ajaxurl, {
-      action: 'caf_update_last_filter',
-      filter: window.selected.join(','),
-      nonce:  cafLastFilterNonce
-    } );
-  }
+	
   // —————————SAVE LAST FILTER————————
 
   // e) Trigger AJAX reload
-  var params = get_params('1', divKey);
-  params['caf-perform'] = 'filter';
+  // Helper function: Build params for AJAX post
+  var params = FilterHelper.buildAjaxParams(divKey, '');
   cafScrollToDiv(divKey);
   get_posts(params);
 
@@ -214,68 +224,72 @@ $(document).on('click', 'ul.caf-multi-drop-sub li.caf_select_multi_default_label
   selected = window.selected.slice();
 
   // —————————SAVE LAST FILTER————————
-  if ( window.saveLastFilterPref ) {
+FilterHelper.saveLastFilterPref(window.selected);
 
-    $.post(ajaxurl, {
-      action: 'caf_update_last_filter',
-      filter: window.selected.join(','),
-      nonce: cafLastFilterNonce
-    });
-  }
   // —————————SAVE LAST FILTER————————
 
   // Now rebuild the dropdown UI
-  $wrap.find('ul.caf-multi-drop-sub li.caf_select_multi_dp_value').each(function(){
-    var val = $(this).attr('data-value'),
-        isActive = selected.indexOf(val) > -1;
-    $(this).toggleClass('active', isActive);
-    console.log("  🔧 option", val, "active?", isActive);
-  });
+  FilterHelper.repaintDropdown($wrap, selected);
 
-  // Update the default button text & value
-  var defaultTxt = $wrap.find('li.caf_select_multi_default').data('default-text'),
-      names      = $wrap.find('ul.caf-multi-drop-sub li.active').map((i, el) => $(el).attr('data-name')).get(),
-      values     = $wrap.find('ul.caf-multi-drop-sub li.active').map((i, el) => $(el).attr('data-value')).get();
+  // Helper function: Get active names and values from a dropdown, update the default button text & value
+	const defaultTxt = $wrap.find('li.caf_select_multi_default').data('default-text');
+	FilterHelper.updateDropdownLabel($wrap, defaultTxt);
 
-  console.log("🔧 [AllHandler] new default names:", names, "values:", values);
-
-  $wrap.find('li.caf_select_multi_default')
-       .attr('data-value', values.length ? values.join(',') : '0')
-       .find('span')
-       .text(names.length ? names.join(', ') : defaultTxt);
 
   // repaint buttons
   renderButtons();
 
   // rebuild the CAF Active-Filters bar
-  var divKey     = $wrap.closest('.caf-post-layout-container').attr('data-target-div'),
+  // Helper function: Get divKey from .caf-post-layout-container
+  var divKey = FilterHelper.getDivKey($wrap.closest('.caf-post-layout-container'))
       $container = $('#caf-post-layout-container.' + divKey);
 
-  set_active_filters($container);
-  $('.caf-active-filters ul li.filter-item').each(function(){
-    var id    = $(this).attr('data-id'),
-        group = $('.caf-active-filters ul li.filter-item[data-id="'+id+'"]');
-    if (group.length > 1) group.not(':first').remove();
-  });
+	FilterHelper.rebuildActiveFilterUI($container);
+
 
   // then fire CAF’s AJAX filter
-  var params = get_params('1', divKey);
-  params['caf-perform'] = 'filter';
-  cafScrollToDiv(divKey);
-  get_posts(params);
+  // Helper function: Build params for AJAX post
+ var params = FilterHelper.buildAjaxParams(divKey, window.selected.join(','));
+	
+console.log('[MTF] [AllHandler] final params to get_posts:', params); // optional
+cafScrollToDiv(divKey);
+get_posts(params);
+	
 });
-
 
 	// after all scripts finish restoring filters on load
-		$(window).on('load', function(){
+
+$(window).on('load', function(){
   setTimeout(function(){
-    if (saveLastFilterPref && Array.isArray(window.selected) && window.selected.length > 0) {
-      renderButtons();
-      set_active_filters($('.caf-post-layout-container'));
-      $(document).trigger('filtersReady');
-    }
-  }, 500);
+    if (window.saveLastFilterPref && Array.isArray(window.selected) && window.selected.length > 0) {
+  renderButtons();
+  set_active_filters($('.caf-post-layout-container'));
+  $(document).trigger('filtersReady');
+}
+	  
+	// Also restore pills for modern layout if needed	  
+	// Helper function: Get divKey from .caf-post-layout-container
+		const $container = $('.caf-post-layout-container');
+		const divKey = FilterHelper.getDivKey($container);
+
+	  const savedTerms = $container.data('terms') || '';
+console.log('[MTF] ⏱ Restore check: savedTerms =', savedTerms);
+
+	  
+	 	
+	// Only override if window.selected is missing or empty  
+	  if ((!window.selected || window.selected.length === 0) && savedTerms && savedTerms.length > 0) {
+  window.selected = savedTerms.split(',');
+  console.log('[MTF] ⏱ window.selected populated from savedTerms:', window.selected);
+}
+
+if (window.selected && window.selected.length > 0) {
+  FilterHelper.rebuildActiveFilterUI($container);
+  console.log('[MTF] ✅ Active filters restored (modern layout)', window.selected);
+}
+  }, 500); // keep your delay
 });
+
 	
 //───────────────────────PART 2: ENABLE MULTIPLE DROPDOWN MENUS OPENED AT THE SAME TIME─────────────────────────────────────
 
