@@ -1,4 +1,4 @@
-console.log('filter-button1.js');
+console.log('filter-button1');
 
 jQuery(function($){
 
@@ -268,6 +268,15 @@ $(document).on(
   'ul.caf-multi-drop-sub li',
   function(){
 
+	      // 🛑 Skip execution for modern layout (handled by filter-button2.js)
+    var $container = $(this).closest('.caf-post-layout-container');
+    var layout = $container.data('filter-layout') || '';
+    if (layout === 'multiple-taxonomy-filter-hor-modern') {
+      console.log('[MTF] filter-button1.js handler skipped for hor-modern');
+      return;
+    }
+
+	  
     // 1.1) Gather all checked IDs from both checkbox filters
     var vals = $(
       '#caf-multiple-check-filter input.check_box:checked,' +
