@@ -1,3 +1,5 @@
+console.log('markup-toggle.js 6');
+
 (function($){
 
   // ——————————————————————————————————————
@@ -26,13 +28,16 @@
     };
 
     // 1B) Live checkbox filters: every checked input under any caf-filter-container
-    const liveTerms = $wrapper
-      .find('.caf-filter-container input:checked')
-      .map(function(){ return this.value; })
-      .get();
+    const liveTerms = Array.from(
+  new Set(
+    $wrapper.find('.caf-filter-container input:checked')
+      .map(function(){ return this.value; }).get()
+  )
+);
 
     if ( liveTerms.length ) {
       params.term = liveTerms.join(',');
+	console.log("get_params() sending terms:", params.term);
     }
 
     // 1C) Live <select> controls under caf-filter-container (per-page, order, etc.)
@@ -53,9 +58,14 @@
       params.search_string = search;
     }
 
+	  params._source_debug_tag = 'markup-toggle.js v2';
+console.log("✔ returning final params:", JSON.parse(JSON.stringify(params)));
+
+	  
     return params;
   };
 
+	
   // ——————————————————————————————————————
   // 2) Define refreshCAF globally (unchanged)
   window.refreshCAF = () => {
