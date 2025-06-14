@@ -1,4 +1,4 @@
-console.log('filter-helper - 1');
+console.log('filter-helper - buildparams 3');
 
 //————————————————— FILTER-BUTTON2.JS FUNCTIONS———————————————
 
@@ -54,6 +54,7 @@ repaintDropdown: function($wrap, selected) {
 },
 
 	  // Helper: refresh the entire UI with dedupeactivefilters
+	  // FL-1, FL-2
 	  rebuildActiveFilterUI: function($container){
   if (typeof set_active_filters === 'function') {
     set_active_filters($container);
@@ -85,6 +86,7 @@ repaintDropdown: function($wrap, selected) {
   },
 	  
 // Helper function: Decide layout string for given container
+// FL-1
 getFilterLayoutFromContainer: function($container, mtfTerms = [], mcfTerms = []) {
   // 1. Taxonomy filters selected
   if (mtfTerms.length > 0) {
@@ -124,25 +126,85 @@ getFilterLayoutFromContainer: function($container, mtfTerms = [], mcfTerms = [])
 },
 	  
 	// Helper function: Build params for AJAX post
-	  buildAjaxParams: function(divKey, termsCSV, triggeredTerm) {
-  const params = get_params('1', divKey);
-  params['caf-perform'] = 'filter';
-  params['term'] = termsCSV;
-  if (typeof triggeredTerm !== 'undefined') {
+	// FL-1
+	/* ===================================================================
+ *  UNIFIED PARAM-BUILDER  –  replaces the old buildAjaxParams
+ * =================================================================*/
+buildAjaxParams: function (divKey, termsCSV, triggeredTerm, page = 1) {
+
+  var sel = '.' + divKey;
+
+  /* Count checked terms */
+  var mcfCount = jQuery('#caf-multiple-check-filter input.check_box:checked').length;
+  var mtfCount = jQuery('#caf-multiple-taxonomy-filter input.check_box:checked').length +
+                 jQuery('ul.caf-multi-drop-sub li.active').length;
+
+  /* Decide which CAF layout to request */
+  var layout;
+  if (mtfCount > 0) {
+    layout = (mtfCount === 1) ? 'multiple-taxonomy-filter' : 'multiple-taxonomy-filter2';
+  } else if (mcfCount > 0) {
+    layout = (mcfCount === 1) ? 'multiple-checkbox' : 'multiple-checkbox2';
+  } else {
+    layout = jQuery(sel).attr('data-filter-layout') || 'multiple-checkbox';
+  }
+
+  /* Build the full params object */
+  var params = {
+    page: page,
+    tax:               jQuery(sel).attr('data-tax'),
+    'post-type':       jQuery(sel).attr('data-post-type'),
+    term:              (termsCSV != null) ? termsCSV
+                     : (window.selected ? window.selected.join(',') : ''),
+    'per-page':        jQuery(sel).attr('data-per-page'),
+    'filter-id':       jQuery(sel).attr('data-filter-id'),
+    'caf-post-layout': jQuery(sel).attr('data-post-layout'),
+    'data-target-div': sel,
+    'data-filter-layout': layout,
+    'data-relation':     jQuery(sel).attr('data-relation'),
+    'data-default-term': jQuery(sel).attr('data-default-term'),
+    'current-post-id':   jQuery(sel).attr('current-post-id'),
+    'data-order-by':     jQuery(sel).attr('data-order-by'),
+    'data-order-type':   jQuery(sel).attr('data-order-type'),
+    'caf-perform':       'filter'
+  };
+
+  if (triggeredTerm != null) {
     params['caf-perform-term'] = triggeredTerm;
   }
+
+  /* Search box */
+  var s = jQuery('#caf-search-input').val();
+  if (s) params.search_string = s;
+
+  /* Toggles */
+  if (typeof window.hideBookmarkedPosts !== 'undefined') {
+    params.hide_bookmarked_posts = window.hideBookmarkedPosts ? '1' : '0';
+  }
+
+  if (typeof window.showSavedPosts !== 'undefined') {
+    params.show_only_saved = window.showSavedPosts ? '1' : '0';
+  }
+
   return params;
 },
 
+
+
+
+
+
+
 	// Helper function: Update container metadata, restore the container’s data-terms & layout
+	// FL-1
 	  updateContainerMeta: function($container, termsCSV, layout) {
   if (!$container || !$container.length) return;
   $container.attr('data-terms', termsCSV);
   $container.attr('data-filter-layout', layout);
 },
 
-	// Helper function: update layout parameter based on how many boxes are checked.
-	// collectCheckedTerms now returns full objects instead of just data-id strings
+	// Helper function: update layout parameter based on how many boxes are checked, returns full objects instead of just data-id strings
+	// FL-1, FL-2
 collectCheckedTerms: function($container, selector) {
   return $container.find(selector).filter(':checked').map(function() {
     const $checkbox = jQuery(this);
@@ -162,6 +224,7 @@ collectCheckedTerms: function($container, selector) {
 
 
 	  // Helper: Combine selected values from both MCF and MTF filters.
+	  // FL-1
 getCombinedFilterTerms: function($container) {
   const mcfTerms = this.collectCheckedTerms($container, "#caf-multiple-check-filter li .check_box").map(x => x.dataId);
   const mtfTerms = this.collectCheckedTerms($container, "#caf-multiple-taxonomy-filter li .check_box").map(x => x.dataId);
@@ -171,6 +234,7 @@ getCombinedFilterTerms: function($container) {
  
 	  
 	  // Helper: Synchronize checkbox states between MCF and MTF.
+	  // FL-1
  syncCheckboxStates: function($container, dataId, isChecked) {
   $container.find("#caf-multiple-check-filter li .check_box[data-id='" + dataId + "']").prop("checked", isChecked);
   $container.find("#caf-multiple-taxonomy-filter li .check_box[data-id='" + dataId + "']").prop("checked", isChecked);
@@ -178,6 +242,7 @@ getCombinedFilterTerms: function($container) {
 
 	  
 	  // Helper: send AJAX request to update filtered posts, targets #manage-ajax-response and uses global nonce.
+	  // FL-1
 sendAjaxFilterRequest: function(params, onSuccess = null, onError = null) {
   jQuery.ajax({
     url: tc_caf_ajax.ajax_url,
@@ -227,6 +292,7 @@ addToActiveFilters: function(label, dataName) {
 },
 
 	  // Helper: Add or remove the “Clear All” button based on active filters
+	  // FL-2
 toggleClearAllButton: function($container) {
   const $list = $container.find(".caf-active-filters ul");
   if (active_filters.length > 0) {
@@ -243,6 +309,7 @@ toggleClearAllButton: function($container) {
 },
 
 	  // Helper: Loop over terms and render any not already in active_filters
+	  // FL-2
 renderPillsFromTerms: function(termsArray, $targetList) {
   termsArray.forEach(term => {
     if (this.addToActiveFilters(term.label, term.dataName)) {
@@ -255,6 +322,7 @@ renderPillsFromTerms: function(termsArray, $targetList) {
 },
 
 	  // Helper: Collect active dropdown filter terms from MTF UI
+	  // 2xFL-2
 collectDropdownTerms: function($container) {
   const mtfTerms = [];
 

@@ -1,4 +1,4 @@
-console.log('filter-layout1 - final');
+console.log('filter-layout1 - 21');
 
 jQuery(document).ready(function($) {
         
@@ -32,14 +32,12 @@ jQuery(document).ready(function($) {
 		FilterHelper.updateContainerMeta(container, combinedTerms, params["data-filter-layout"]);
 		
         // Helper: send AJAX request to update filtered posts
-        FilterHelper.sendAjaxFilterRequest(params);
+        // REMOVE / COMMENT OUT → let the CAF plugin send the AJAX (in markup-toggle.js)
+  		 FilterHelper.sendAjaxFilterRequest(params);
 
 		
-		
+	// end of Unified event handler
     });
 	
-	
-	
-	
-	
+// end of jQuery		
 });

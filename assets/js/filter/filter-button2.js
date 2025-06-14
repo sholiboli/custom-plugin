@@ -1,5 +1,4 @@
-console.log('filter-button2');
-console.log('FilterHelper exists?', typeof FilterHelper !== 'undefined');
+console.log('filter-button2 - fav 4');
 
 //———————————————————————————————————————————— JS SCRIPT HELPER————————————————————————————————————————————————————————————————
 
@@ -8,6 +7,26 @@ jQuery(function($){
 // Work on the shared array by aliasing it locally…
 var selected = window.selected || [];
 
+	// Initialize toggle state from localized PHP variable
+	if (typeof window.hideBookmarkedPosts === 'undefined') {
+  if (typeof toggleBookmarkedPosts !== 'undefined' && toggleBookmarkedPosts.hide === '1') {
+    window.hideBookmarkedPosts = true;
+  } else {
+    window.hideBookmarkedPosts = false;
+  }
+}
+
+// Initialize showSavedPosts from localized PHP variable
+if (typeof window.showSavedPosts === 'undefined') {
+  if (typeof favToggleData !== 'undefined' && favToggleData.show_only_saved === '1') {
+    window.showSavedPosts = true;
+  } else {
+    window.showSavedPosts = false;
+  }
+}
+
+	
+	
 // Ensure window.saveLastFilterPref is correctly set
 if (typeof window.saveLastFilterPref === 'undefined') {
   if (typeof userSaveLastFilter !== 'undefined') {
@@ -39,8 +58,7 @@ $(document).on('click.customMTF', 'ul.caf-multi-drop-sub li', function (e) {
   /* ------------------A. BYPASS “All …” LABEL------------------ */
 	
   if ($li.hasClass('caf_select_multi_default_label_2')) {
-    console.log('[MTF] All-label clicked → let CAF default run');
-    return false;
+       return false;
   }
 
   /* -----------B. STOP CAF’S OWN LISTENER (unchanged from your code)----------------- */
@@ -55,12 +73,12 @@ $(document).on('click.customMTF', 'ul.caf-multi-drop-sub li', function (e) {
       $wrap     = $dropdown.closest('ul.caf_select_multi'),
       $def      = $wrap.find('.caf_select_multi_default'),
       defaultTxt = $def.data('default-text');
-  console.log('[MTF] defaultTxt:', defaultTxt);
+
 
   /* --------D. TOGGLE ACTIVE STATE---------------------- */
 	
   $li.toggleClass('active');
-  console.log('[MTF] $li isActive?', $li.hasClass('active'));
+ 
 
   /* --------E. LABEL & DATA-VALUE ON <li.caf_select_multi_default> -------------------------------- */
  
@@ -69,8 +87,6 @@ $(document).on('click.customMTF', 'ul.caf-multi-drop-sub li', function (e) {
 	// Helper: Default text and value updater
 	FilterHelper.updateDropdownLabel($wrap, defaultTxt);
 
-  console.log('[MTF] names[]:', names);
-  console.log('[MTF] vals[] :', values);
 
 	  /* ---------F. IDENTIFY THE TARGET GRID------------------ */
 	
@@ -78,7 +94,6 @@ $(document).on('click.customMTF', 'ul.caf-multi-drop-sub li', function (e) {
                     .attr('class')
                     .split(/\s+/)
                     .find(c => c.indexOf('data-target-div') === 0);
-  console.log('[MTF] divClass:', divClass);
 
   /* -------- G. COLLECT SELECTED TERMS  (*** KEY PART ***)------------------ */
 	
@@ -89,13 +104,10 @@ var allVals = $('ul.caf-multi-drop-sub li.active').map(function(){
 
 var flat     = allVals.slice(); // full deduped list
 var termsCSV = flat.join(',');
-console.log('[MTF] flat     →', flat);
-console.log('[MTF] termsCSV →', termsCSV);
 
 /* keep globals in sync */
 window.selected = flat.slice();
-console.log('[MTF] ✅ window.selected updated across all dropdowns:', window.selected);
-
+		
 /* persist last-filter pref if enabled */
 FilterHelper.saveLastFilterPref(window.selected);
 
@@ -104,8 +116,7 @@ FilterHelper.saveLastFilterPref(window.selected);
 	// Helper function: Decide layout string for given container
 	var $container = $('#caf-post-layout-container.' + divClass);
 	var layout = FilterHelper.getFilterLayoutFromContainer($container, flat);
-	console.log('[MTF] chosen layout →', layout);
-
+	
 	// Helper function: Update container metadata, store latest terms/layout on wrapper
 		FilterHelper.updateContainerMeta($container, termsCSV, layout);
 
@@ -114,21 +125,19 @@ FilterHelper.saveLastFilterPref(window.selected);
 	// Helper function: Build params for AJAX post
 		var params = FilterHelper.buildAjaxParams(divClass, termsCSV, $li.data('value'));
 
-  console.log('[MTF] final params to get_posts:', params);
-
+ 	
   /* ------------- J. FIRE AJAX & UI HELPERS------------------- */
 	
   cafScrollToDiv(divClass.replace('data-target-div', ''));
+
   get_posts(params);
-   console.log('[MTF] get_posts received:', JSON.parse(JSON.stringify(params)));
 
   /* after reload, refresh pills */
   setTimeout(function () {
     $('.caf-filter-layout').each(function () {
       set_active_filters(this);
     });
-    console.log('[MTF] set_active_filters() ran (timeout)');
-	  
+    
 	  
 	   // 11) Save filter to DB if enabled
 FilterHelper.saveLastFilterPref(window.selected);
@@ -137,7 +146,6 @@ FilterHelper.saveLastFilterPref(window.selected);
   /* rebuild custom buttons */
   renderButtons();
   FilterHelper.rebuildActiveFilterUI($container);
-  console.log('[MTF] custom buttons rebuilt');
 });
 	
 	// 4) Clear All handler for MTF
@@ -174,10 +182,10 @@ FilterHelper.saveLastFilterPref(window.selected);
   // Helper function: Build params for AJAX post
   var params = FilterHelper.buildAjaxParams(divKey, '');
   cafScrollToDiv(divKey);
+
   get_posts(params);
 
   // —— NEW —— repaint your custom buttons before clearing pills
-  console.log("🛠 [MTF ClearAll] before set_active_filters(), window.selected =", window.selected);
   renderButtons();
 
   // f) Rebuild the (now empty) active-filters UI
@@ -191,9 +199,7 @@ FilterHelper.saveLastFilterPref(window.selected);
 $(document).on('click', 'ul.caf-multi-drop-sub li.caf_select_multi_default_label_2', function(e){
   e.preventDefault();
   e.stopPropagation();
-
-  console.log("🔧 [AllHandler] clicked inner All …");
-
+	
   var $wrap     = $(this).closest('ul.caf_select_multi'),
       taxonomy  = $wrap
                    .find('ul.caf-multi-drop-sub li.caf_select_multi_dp_value')
@@ -217,9 +223,7 @@ $(document).on('click', 'ul.caf-multi-drop-sub li.caf_select_multi_default_label
     window.selected = window.selected.filter(v => !v.startsWith(taxonomy + '___'));
   }
 
-  // Debug #3: after mutation
-  console.log("🔧 [AllHandler] window.selected after:", window.selected);
-
+	
   // keep your local copy in sync
   selected = window.selected.slice();
 
@@ -251,8 +255,8 @@ FilterHelper.saveLastFilterPref(window.selected);
   // Helper function: Build params for AJAX post
  var params = FilterHelper.buildAjaxParams(divKey, window.selected.join(','));
 	
-console.log('[MTF] [AllHandler] final params to get_posts:', params); // optional
 cafScrollToDiv(divKey);
+
 get_posts(params);
 	
 });
@@ -261,34 +265,89 @@ get_posts(params);
 
 $(window).on('load', function(){
   setTimeout(function(){
-    if (window.saveLastFilterPref && Array.isArray(window.selected) && window.selected.length > 0) {
-  renderButtons();
-  set_active_filters($('.caf-post-layout-container'));
-  $(document).trigger('filtersReady');
-}
-	  
-	// Also restore pills for modern layout if needed	  
-	// Helper function: Get divKey from .caf-post-layout-container
-		const $container = $('.caf-post-layout-container');
-		const divKey = FilterHelper.getDivKey($container);
+    const $container = $('.caf-post-layout-container');
+    const divKey = FilterHelper.getDivKey($container);
+    const savedTerms = $container.data('terms') || '';
+	 	  
+    // Step 1: Restore window.selected from data-terms if not already set
+    if ((!window.selected || window.selected.length === 0) && savedTerms && savedTerms.length > 0) {
+      window.selected = savedTerms.split(',');
 
-	  const savedTerms = $container.data('terms') || '';
-console.log('[MTF] ⏱ Restore check: savedTerms =', savedTerms);
+    }
 
-	  
-	 	
-	// Only override if window.selected is missing or empty  
-	  if ((!window.selected || window.selected.length === 0) && savedTerms && savedTerms.length > 0) {
-  window.selected = savedTerms.split(',');
-  console.log('[MTF] ⏱ window.selected populated from savedTerms:', window.selected);
-}
+    // Step 2: Repaint dropdown UI to reflect saved state
+    if (Array.isArray(window.selected) && window.selected.length > 0) {
+      $('ul.caf_select_multi').each(function() {
+        FilterHelper.repaintDropdown($(this), window.selected);
+      });
 
-if (window.selected && window.selected.length > 0) {
-  FilterHelper.rebuildActiveFilterUI($container);
-  console.log('[MTF] ✅ Active filters restored (modern layout)', window.selected);
-}
-  }, 500); // keep your delay
+      // Step 3: Rebuild filter pills and sync CAF UI
+      if (window.saveLastFilterPref) {
+        renderButtons();
+        set_active_filters($container);
+        $(document).trigger('filtersReady');
+      }
+
+      FilterHelper.rebuildActiveFilterUI($container);
+		
+    }
+  }, 500); // Keep your existing delay for now
 });
+
+
+	
+// SEAMLESS HIDE UNREAD POSTS for MTFM
+	
+$('.toggle-show-read input.custom-toggle-input').on('change', function () {
+  const isHidden = $(this).is(':checked');
+  window.hideBookmarkedPosts = isHidden;
+
+  // Save to user meta (AJAX call)
+  $.post(toggleBookmarkedPosts.ajax_url, {
+    action: isHidden ? 'hide_bookmarked_posts' : 'show_bookmarked_posts',
+    hide: isHidden ? 'true' : 'false'
+  });
+
+  // Delay the reload slightly to avoid race conditions
+  setTimeout(() => {
+    if (typeof window.selected !== 'undefined' && typeof FilterHelper !== 'undefined') {
+      const $container = $('.caf-post-layout-container');
+      const divKey = FilterHelper.getDivKey($container);
+      const termsCSV = (window.selected || []).join(',');
+      const params = FilterHelper.buildAjaxParams(divKey, termsCSV);
+      params.hide_bookmarked_posts = isHidden ? '1' : '0';
+      get_posts(params);
+    }
+  }, 300); // adjust delay as needed
+});
+
+// SEAMLESS SHOW SAVED POSTS for MTFM
+
+	$('.toggle-show-saved input.custom-toggle-input').on('change', function () {
+  const isSavedOnly = $(this).is(':checked');
+  window.showSavedPosts = isSavedOnly;
+
+  // Save to user meta (AJAX call)
+  $.post(favToggleData.ajax_url, {
+    action: isSavedOnly ? 'show_saved_posts' : 'hide_saved_posts',
+    show: isSavedOnly ? 'true' : 'false'
+  });
+
+  // Delay the reload slightly to avoid race conditions
+  setTimeout(() => {
+    if (typeof window.selected !== 'undefined' && typeof FilterHelper !== 'undefined') {
+      const $container = $('.caf-post-layout-container');
+      const divKey = FilterHelper.getDivKey($container);
+      const termsCSV = (window.selected || []).join(',');
+      const params = FilterHelper.buildAjaxParams(divKey, termsCSV);
+      params.show_only_saved = isSavedOnly ? '1' : '0';
+      get_posts(params);
+    }
+  }, 300); // match delay to existing pattern
+});
+
+
+
 
 	
 //───────────────────────PART 2: ENABLE MULTIPLE DROPDOWN MENUS OPENED AT THE SAME TIME─────────────────────────────────────

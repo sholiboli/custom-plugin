@@ -1,12 +1,12 @@
-console.log('filter-button1');
+console.log('filter-button1 - build params 4');
 
 jQuery(function($){
 
-// Work on the shared array by aliasing it locally…
+//0. Work on the shared array by aliasing it locally…
 var selected = window.selected || [];
 
 	
-// If the user has NOT chosen “save last filter,” make sure no browser restoration sticks us with stale checks in Firefox
+//0.1 If the user has NOT chosen “save last filter,” make sure no browser restoration sticks us with stale checks in Firefox
   if ( ! saveLastFilterPref ) {
     $('#caf-multiple-check-filter input.check_box, #caf-multiple-taxonomy-filter input.check_box')
       .prop('checked', false);
@@ -16,7 +16,7 @@ var selected = window.selected || [];
     .removeClass('active');
   }
 	
-// Helper: remove duplicate pills from the Active-Filters bar
+//0.2 Helper: remove duplicate pills from the Active-Filters bar
   function dedupeActiveFilters(){
     var seen = {};
     $('.caf-active-filters ul li.filter-item').each(function(){
@@ -29,8 +29,9 @@ var selected = window.selected || [];
     });
   }
 	
-//───────────────────────PHASES LETTERS─────────────────────────────────────
-    // A) Read user preference for multiSelectMode
+//───────────────────────1.   CUSTOM FILTER BUTTONS MODES─────────────────────────────────────
+
+    // A) Read user preference for MULTISELECT
   var multiSelectMode = false;
   if (typeof userMultiSelectMode !== 'undefined') {
     multiSelectMode = Boolean(parseInt(userMultiSelectMode, 10));
@@ -169,63 +170,19 @@ window.renderButtons = renderButtons;
 
 	
 //-------------------------------------------------------------------------
-  // 3) Build CAF AJAX params, choosing layout based on both MCF & MTF selections
-function buildParams(page, div){
-  var sel = '.' + div;
-
-  // Count how many are checked in each filter
-  var mcfCount = $('#caf-multiple-check-filter input.check_box:checked').length;
-  var mtfCount = $('#caf-multiple-taxonomy-filter input.check_box:checked').length
-               + $('ul.caf-multi-drop-sub li.active').length;
-
-  // Decide which CAF layout to request
-  var layout;
-  if (mtfCount > 0) {
-    layout = (mtfCount === 1)
-      ? 'multiple-taxonomy-filter'
-      : 'multiple-taxonomy-filter2';
-  } else if (mcfCount > 0) {
-    layout = (mcfCount === 1)
-      ? 'multiple-checkbox'
-      : 'multiple-checkbox2';
-  } else {
-    // fallback to whatever the container initially declared
-    layout = $(sel).attr('data-filter-layout') || 'multiple-checkbox';
-  }
-
-  var p = {
-    page: page,
-    tax:             $(sel).attr('data-tax'),
-    'post-type':     $(sel).attr('data-post-type'),
-    term:            selected.join(','),
-    'per-page':      $(sel).attr('data-per-page'),
-    'filter-id':     $(sel).attr('data-filter-id'),
-    'caf-post-layout':  $(sel).attr('data-post-layout'),
-    'data-target-div':  sel,
-    'data-filter-layout': layout,
-    'data-relation':     $(sel).attr('data-relation'),
-    'data-default-term': $(sel).attr('data-default-term'),
-    'current-post-id':   $(sel).attr('current-post-id'),
-    'data-order-by':     $(sel).attr('data-order-by'),
-    'data-order-type':   $(sel).attr('data-order-type')
-  };
-
-  var s = $('#caf-search-input').val();
-  if (s) p.search_string = s;
-
-  return p;
-}
 
 //-------------------------------------------------------------------------
 // 4) Fire filter + save last
 function applyCustomFilters(){
-
+console.log('[JS optim] applyCustomFilters fired');
   // Always target the actual CAF grid container
   var $container = $('.caf-post-layout-container'),
       div        = $container.attr('data-target-div');
 
   // Build the AJAX params off that container’s divKey
-  var params = buildParams(1, div);
+  var params = FilterHelper.buildAjaxParams(div, null, null, 1);
+
+
 
 
   $.ajax({
@@ -266,9 +223,22 @@ $(document).on(
   '#caf-multiple-check-filter input.check_box, ' +
   '#caf-multiple-taxonomy-filter input.check_box, ' +
   'ul.caf-multi-drop-sub li',
-  function(){
+  function (e) {
 
-	      // 🛑 Skip execution for modern layout (handled by filter-button2.js)
+    /* -------------------------------------------------------------
+     * Duplicate-trigger guard
+     * -------------------------------------------------------------
+     * - checkboxes fire both click + change  → keep CHANGE only
+     * - dropdown <li> items fire click       → keep CLICK only
+     * ----------------------------------------------------------- */
+    if (
+      (e.type === 'click'  && this.tagName.toUpperCase() === 'INPUT') ||
+      (e.type === 'change' && this.tagName.toUpperCase() === 'LI')
+    ) {
+      return;   // ⛔ skip the redundant call
+    }
+
+    // 🛑 Skip execution for modern layout (handled by filter-button2.js)
     var $container = $(this).closest('.caf-post-layout-container');
     var layout = $container.data('filter-layout') || '';
     if (layout === 'multiple-taxonomy-filter-hor-modern') {
@@ -276,17 +246,16 @@ $(document).on(
       return;
     }
 
-	  
     // 1.1) Gather all checked IDs from both checkbox filters
     var vals = $(
       '#caf-multiple-check-filter input.check_box:checked,' +
       '#caf-multiple-taxonomy-filter input.check_box:checked'
-    ).map(function(){
+    ).map(function () {
       return this.getAttribute('data-id');
     }).get();
 
     // 1.2) Also gather all active IDs from the modern dropdown (MTF)
-    var dropdownVals = $('ul.caf-multi-drop-sub li.active').map(function(){
+    var dropdownVals = $('ul.caf-multi-drop-sub li.active').map(function () {
       return this.getAttribute('data-value');
     }).get();
 
@@ -295,31 +264,31 @@ $(document).on(
 
     // 3) Update our selected[] array
     selected = vals;
-	  window.selected = selected;
-
+    window.selected = selected;
 
     // 4) Update your custom filter buttons
     renderButtons();
 
     // 5) Sync the CAF Active-Filters bar
     var div = $('#caf-multiple-check-filter input.check_box').first().data('target-div');
-    set_active_filters( $('.caf-post-layout-container.' + div) );
-    dedupeActiveFilters(); // ← remove any duplicate pills
+    set_active_filters($('.caf-post-layout-container.' + div));
+    dedupeActiveFilters();   // remove any duplicate pills
 
     // 6) Finally, re-fire the AJAX to refresh the grid
     applyCustomFilters();
 
     // 7) Save the new filter if the user has “save last” enabled
-    if ( saveLastFilterPref ) {
+    if (saveLastFilterPref) {
       var newFilter = selected.join(',');
       $.post(ajaxurl, {
         action: 'caf_update_last_filter',
         filter: newFilter,
-        nonce: cafLastFilterNonce
+        nonce:  cafLastFilterNonce
       });
     }
   }
 );
+
 
 	
 	

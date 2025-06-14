@@ -25,13 +25,14 @@ jQuery(function($){
 
     // Helper: remove duplicate pills from the Active-Filters bar -> filter-button2
     FilterHelper.dedupeActiveFilters($(div));
-	  	  
+	  	
+	// end of set_active_filters
   };
 
   // Helper: refresh the entire UI with dedupeactivefilters
-  $(document).on('filtersReady', function() {
-  FilterHelper.rebuildActiveFilterUI($('.caf-post-layout-container'));
-});
+	$(document).on('filtersReady', function() {
+	FilterHelper.rebuildActiveFilterUI($('.caf-post-layout-container'));
+	});
 
-
+// end of jQuery	
 });
