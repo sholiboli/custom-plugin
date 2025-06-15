@@ -1,7 +1,14 @@
-console.log('markup-toggle.js 6');
+console.log('markup-toggle.js 16');
 
 (function($){
 
+	
+	/* === START: global flag initialisation ========================= */
+  window.hideBookmarkedPosts = $('.toggle-show-read  input.custom-toggle-input').is(':checked');
+  window.showSavedPosts      = $('.toggle-show-saved input.custom-toggle-input').is(':checked');
+  /* === END: global flag initialisation =========================== */
+	
+	
   // ——————————————————————————————————————
   // 1) Define CAF’s get_params as a true global, now including live filter state
   window.get_params = (page, divKey) => {
@@ -139,11 +146,19 @@ function initFlagToggle(flagKey, cfg) {
          .closest('.oew-switch-wrap')
          .toggleClass('oew-switch-on',  isOn)
          .toggleClass('oew-switch-off', !isOn);
+	
+	/* NEW — keep global flags in sync after PHP hydration */
+if (flagKey === 'hide')              window.hideBookmarkedPosts = isOn;
+if (flagKey === 'show_only_saved')   window.showSavedPosts      = isOn;
 
   // 2) on any change, send AJAX and refresh CAF
   $inputs.on('change', function (e) {
     e.preventDefault();
     const nowOn = $(this).is(':checked');
+	//
+	if (flagKey === 'hide') window.hideBookmarkedPosts = nowOn;
+	if (flagKey === 'show_only_saved') window.showSavedPosts = nowOn;
+	//
     $inputs.prop('disabled', true);
 
     /* ─── GUEST-ONLY ▼────────────────────────────── */
@@ -156,16 +171,39 @@ function initFlagToggle(flagKey, cfg) {
   if (flagKey === 'show_only_liked') {
     document.cookie =
       `guest_show_only_liked=${nowOn ? 1 : 0};path=/;max-age=${60*60*24*30}`;
-  } else if (flagKey === 'hide_custom_read') {          // ← NEW block
+  } 
+	else if (flagKey === 'hide_custom_read') {          // ← NEW block
     document.cookie =
       `guest_hide_custom_read=${nowOn ? 1 : 0};path=/;max-age=${60*60*24*30}`;
   }
+	else if (flagKey === 'show_only_saved') {
+  document.cookie =
+    `guest_show_only_saved=${nowOn ? 1 : 0};path=/;max-age=${60*60*24*30}`;
+}
+
 
   /* instant UI + grid refresh */
   $(this).closest('.oew-switch-wrap')
          .toggleClass('oew-switch-on',  nowOn)
          .toggleClass('oew-switch-off', !nowOn);
-  refreshCAF();
+  //refreshCAF();
+  //--------------------------
+// Build params and refresh the post grid (hide-read aware)
+const $container = $('.caf-post-layout-container');
+const divKey     = FilterHelper.getDivKey($container);
+const termsCSV   = (window.selected || []).join(',');
+
+const params = FilterHelper.buildAjaxParams(divKey, termsCSV);
+params.hide_bookmarked_posts = window.hideBookmarkedPosts ? '1' : '0';
+params.show_only_saved       = window.showSavedPosts      ? '1' : '0';
+
+setTimeout(() => {              // keep the 300-ms delay
+  get_posts(params);
+}, 300);
+
+
+		
+//--------------------------
   $inputs.prop('disabled', false);
   return;            // ← skip the AJAX call
 }
@@ -182,7 +220,23 @@ function initFlagToggle(flagKey, cfg) {
                .closest('.oew-switch-wrap')
                .toggleClass('oew-switch-on',  nowOn)
                .toggleClass('oew-switch-off', !nowOn);
-        refreshCAF();
+        //refreshCAF();
+         //--------------------------
+// Build params and refresh the post grid (hide-read aware)
+// Build params and refresh (saved + hide-read aware)
+const $container = $('.caf-post-layout-container');
+const divKey   = FilterHelper.getDivKey($container);
+const termsCSV = (window.selected || []).join(',');
+
+const params = FilterHelper.buildAjaxParams(divKey, termsCSV);
+params.hide_bookmarked_posts = window.hideBookmarkedPosts ? '1' : '0';
+params.show_only_saved       = window.showSavedPosts      ? '1' : '0';
+
+setTimeout(() => { get_posts(params); }, 300);
+
+
+		
+		//--------------------------
       })
       .fail(() => { alert('Could not update preference.'); });
   });
