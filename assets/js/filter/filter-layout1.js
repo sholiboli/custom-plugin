@@ -1,4 +1,4 @@
-console.log('filter-layout1 - 21');
+console.log('filter-layout1 - v1');
 
 jQuery(document).ready(function($) {
         
@@ -33,7 +33,7 @@ jQuery(document).ready(function($) {
 		
         // Helper: send AJAX request to update filtered posts
         // REMOVE / COMMENT OUT → let the CAF plugin send the AJAX (in markup-toggle.js)
-  		 FilterHelper.sendAjaxFilterRequest(params);
+  		// FilterHelper.sendAjaxFilterRequest(params);
 
 		
 	// end of Unified event handler

@@ -1,4 +1,4 @@
-console.log('filter-button2 - fav 4');
+console.log('filter-button2 - v5');
 
 //———————————————————————————————————————————— JS SCRIPT HELPER————————————————————————————————————————————————————————————————
 
@@ -7,6 +7,7 @@ jQuery(function($){
 // Work on the shared array by aliasing it locally…
 var selected = window.selected || [];
 
+	/*
 	// Initialize toggle state from localized PHP variable
 	if (typeof window.hideBookmarkedPosts === 'undefined') {
   if (typeof toggleBookmarkedPosts !== 'undefined' && toggleBookmarkedPosts.hide === '1') {
@@ -24,7 +25,7 @@ if (typeof window.showSavedPosts === 'undefined') {
     window.showSavedPosts = false;
   }
 }
-
+*/
 	
 	
 // Ensure window.saveLastFilterPref is correctly set
@@ -297,8 +298,10 @@ $(window).on('load', function(){
 
 	
 // SEAMLESS HIDE UNREAD POSTS for MTFM
-	
+
+	/*
 $('.toggle-show-read input.custom-toggle-input').on('change', function () {
+	 console.log('BUTTON2-toggle handler fired');
   const isHidden = $(this).is(':checked');
   window.hideBookmarkedPosts = isHidden;
 
@@ -320,9 +323,10 @@ $('.toggle-show-read input.custom-toggle-input').on('change', function () {
     }
   }, 300); // adjust delay as needed
 });
+*/
 
 // SEAMLESS SHOW SAVED POSTS for MTFM
-
+/*
 	$('.toggle-show-saved input.custom-toggle-input').on('change', function () {
   const isSavedOnly = $(this).is(':checked');
   window.showSavedPosts = isSavedOnly;
@@ -345,7 +349,7 @@ $('.toggle-show-read input.custom-toggle-input').on('change', function () {
     }
   }, 300); // match delay to existing pattern
 });
-
+*/
 
 
 

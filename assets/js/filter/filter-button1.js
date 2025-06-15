@@ -1,4 +1,4 @@
-console.log('filter-button1 - build params 4');
+console.log('filter-button1 - v1');
 
 jQuery(function($){
 
@@ -238,7 +238,7 @@ $(document).on(
       return;   // ⛔ skip the redundant call
     }
 
-    // 🛑 Skip execution for modern layout (handled by filter-button2.js)
+    //  🛑 Skip execution for modern layout (handled by filter-button2.js)
     var $container = $(this).closest('.caf-post-layout-container');
     var layout = $container.data('filter-layout') || '';
     if (layout === 'multiple-taxonomy-filter-hor-modern') {
@@ -274,8 +274,18 @@ $(document).on(
     set_active_filters($('.caf-post-layout-container.' + div));
     dedupeActiveFilters();   // remove any duplicate pills
 
-    // 6) Finally, re-fire the AJAX to refresh the grid
-    applyCustomFilters();
+    /* -------------------------------------------------------------
+     * 6) ⚠️ REMOVE THE LINE THAT RE-FIRES AJAX
+     * -------------------------------------------------------------
+     * The grid will refresh automatically because either
+     *  - CAF core   OR
+     *  - filter-layout1.js
+     * is already listening to the same checkbox change.
+     *
+     * Comment it out or delete it:
+     *
+     *   applyCustomFilters();   ← delete / comment
+     * ----------------------------------------------------------- */
 
     // 7) Save the new filter if the user has “save last” enabled
     if (saveLastFilterPref) {
@@ -288,6 +298,7 @@ $(document).on(
     }
   }
 );
+
 
 
 	

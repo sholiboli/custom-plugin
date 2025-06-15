@@ -1,4 +1,4 @@
-console.log('filter-layout2 - 1');
+console.log('filter-layout2 - ');
 
 jQuery(function($){
 

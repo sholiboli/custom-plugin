@@ -1,4 +1,4 @@
-console.log('filter-helper - buildparams 3');
+console.log('filter-helper - v111');
 
 //————————————————— FILTER-BUTTON2.JS FUNCTIONS———————————————
 
@@ -177,14 +177,13 @@ buildAjaxParams: function (divKey, termsCSV, triggeredTerm, page = 1) {
   var s = jQuery('#caf-search-input').val();
   if (s) params.search_string = s;
 
-  /* Toggles */
-  if (typeof window.hideBookmarkedPosts !== 'undefined') {
-    params.hide_bookmarked_posts = window.hideBookmarkedPosts ? '1' : '0';
-  }
+  /* Toggles  –  read the live checkbox state, ignore globals */
+params.hide_bookmarked_posts =
+  jQuery('.toggle-show-read  input.custom-toggle-input').is(':checked') ? '1' : '0';
 
-  if (typeof window.showSavedPosts !== 'undefined') {
-    params.show_only_saved = window.showSavedPosts ? '1' : '0';
-  }
+params.show_only_saved =
+  jQuery('.toggle-show-saved input.custom-toggle-input').is(':checked') ? '1' : '0';
+
 
   return params;
 },
@@ -235,10 +234,58 @@ getCombinedFilterTerms: function($container) {
 	  
 	  // Helper: Synchronize checkbox states between MCF and MTF.
 	  // FL-1
- syncCheckboxStates: function($container, dataId, isChecked) {
-  $container.find("#caf-multiple-check-filter li .check_box[data-id='" + dataId + "']").prop("checked", isChecked);
-  $container.find("#caf-multiple-taxonomy-filter li .check_box[data-id='" + dataId + "']").prop("checked", isChecked);
+// Helper: Synchronize checkbox states between MCF and MTF.  // FL-1
+syncCheckboxStates: function($container, dataId, isChecked) {
+  $container
+    .find("#caf-multiple-check-filter li .check_box[data-id='" + dataId + "']")
+    .prop("checked", isChecked);
+
+  $container
+    .find("#caf-multiple-taxonomy-filter li .check_box[data-id='" + dataId + "']")
+    .prop("checked", isChecked);
+
+  /* toggle active state on every custom-filter button */
+  jQuery(".caf-custom-filter-btn[data-filter='" + dataId + "']")
+    [isChecked ? "addClass" : "removeClass"]("active-button");
+
+  /* --- keep window.selected up-to-date -------------------- */
+  if (Array.isArray(window.selected)) {
+    if (isChecked) {
+      if (window.selected.indexOf(dataId) === -1) {
+        window.selected.push(dataId);              // add if missing
+      }
+    } else {
+      var idx = window.selected.indexOf(dataId);   // remove if present
+      if (idx > -1) {
+        window.selected.splice(idx, 1);
+      }
+    }
+  }
+
+  /* fire CAF refresh & clean up MTF list only when un-checking */
+  if (isChecked === false) {
+    $container
+      .find("#caf-multiple-check-filter li .check_box[data-id='" + dataId + "']")
+      .trigger("change");
+    $container
+      .find("#caf-multiple-taxonomy-filter li .check_box[data-id='" + dataId + "']")
+      .trigger("change");
+
+    $container
+      .find("#caf-multiple-taxonomy-filter li.active .check_box[data-id='" + dataId + "']")
+      .closest("li").removeClass("active");
+  }
+
+  /* refresh all custom buttons after window.selected changes */
+  if (typeof FilterHelper.updateCustomButtonStates === 'function') {
+    FilterHelper.updateCustomButtonStates();
+  }
 },
+
+
+
+
+
 
 	  
 	  // Helper: send AJAX request to update filtered posts, targets #manage-ajax-response and uses global nonce.
@@ -344,5 +391,44 @@ collectDropdownTerms: function($container) {
 	  
 	// ending bracket - window.FilterHelper 
   };
+	
+
+	// new get params function to add functionalities on top of the CAF default function
+FilterHelper.addCustomParams = function (params, divKey) {
+  var sel = '.' + divKey;
+  var mcfCount = jQuery('#caf-multiple-check-filter input.check_box:checked').length;
+  var mtfCount = jQuery('#caf-multiple-taxonomy-filter input.check_box:checked').length +
+                 jQuery('ul.caf-multi-drop-sub li.active').length;
+
+  var layout;
+  if (mtfCount > 0) {
+    layout = (mtfCount === 1) ? 'multiple-taxonomy-filter' : 'multiple-taxonomy-filter2';
+  } else if (mcfCount > 0) {
+    layout = (mcfCount === 1) ? 'multiple-checkbox' : 'multiple-checkbox2';
+  } else {
+    layout = jQuery(sel).attr('data-filter-layout') || 'multiple-checkbox';
+  }
+
+  params['data-filter-layout'] = layout;
+
+  if (typeof window.hideBookmarkedPosts !== 'undefined') {
+    params.hide_bookmarked_posts = window.hideBookmarkedPosts ? '1' : '0';
+  }
+
+  if (typeof window.showSavedPosts !== 'undefined') {
+    params.show_only_saved = window.showSavedPosts ? '1' : '0';
+  }
+};
+
+document.addEventListener('caf:beforeAjax', function (e) {
+  var div   = e.detail.div;
+  var params = e.detail.params;
+
+  FilterHelper.addCustomParams(params, div);
+});
+
+	
+	
+	
 	// ending bracket - if (typeof window.FilterHelper === 'undefined')
 }
